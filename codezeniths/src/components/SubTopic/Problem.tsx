@@ -9,7 +9,9 @@ interface ProblemProps {
   index: number;
 }
 
-const difficultyConfig = {
+type Difficulty = "EASY" | "MEDIUM" | "HARD";
+ 
+const difficultyConfig: Record<Difficulty, { label: string; className: string }> = {
   EASY: { label: "Easy", className: "text-olive bg-olive/10" },
   MEDIUM: { label: "Medium", className: "text-warning bg-warning/10" },
   HARD: { label: "Hard", className: "text-destructive bg-destructive/10" },
@@ -17,7 +19,7 @@ const difficultyConfig = {
 
 const Problem: FC<ProblemProps> = memo(({ problem, index }) => {
   const { title, difficulty, leetcodeUrl, articleUrl, order } = problem;
-  const diff = difficultyConfig[difficulty];
+  const diff = difficultyConfig[difficulty as Difficulty];
 
   return (
     <div
