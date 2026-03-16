@@ -1,0 +1,72 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum Difficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
+model Problem {
+    id           String         @id @default(uuid(7)) @db.Uuid
+    title        String
+    slug         String         @unique
+    content      String?
+    difficulty   Difficulty
+    leetcodeUrl  String?
+    articleUrl   String?
+    topicProblem TopicProblem[]
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
+
+    @@index([difficulty, slug])
+    @@map("problem")
+}
+
+model Topic {
+    id        String         @id @default(uuid(7)) @db.Uuid
+    title     String
+    slug      String
+    order     Int
+    iconPath  String?
+    subTopics SubTopic[]
+    problems  TopicProblem[]
+
+    @@unique([slug])
+    @@index([order])
+    @@map("sheet_topic")
+}
+
+model SubTopic {
+    id         String         @id @default(uuid(7)) @db.Uuid
+    topicId    String         @db.Uuid
+    title      String
+    slug       String
+    order      Int
+    sheetTopic Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+    problems   TopicProblem[]
+
+    @@unique([topicId, slug])
+    @@index([topicId, order])
+    @@map("sheet_sub_topic")
+}
+
+model TopicProblem {
+    id            String    @id @default(uuid(7)) @db.Uuid
+    topicId       String    @db.Uuid
+    subTopicId    String   @db.Uuid
+    problemId     String    @db.Uuid
+    order         Int
+    topic         Topic     @relation(fields: [topicId], references: [id])
+    sheetSubTopic SubTopic @relation(fields: [subTopicId], references: [id])
+    problem       Problem   @relation(fields: [problemId], references: [id])
+
+    @@unique([topicId, subTopicId, problemId])
+    @@index([order])
+    @@map("sheet_problem")
+}

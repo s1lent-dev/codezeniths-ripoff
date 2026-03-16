@@ -1,0 +1,318 @@
+@import url("https://fonts.googleapis.com/css2?family=Andika&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Batang&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=New+Rocker&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@custom-variant dark (&:where(.dark, .dark *));
+
+body {
+    @apply m-0;
+    font-family: var(--font-sans);
+}
+
+@theme {
+
+    /* Color Palette */
+    --color-primary: #6A7CFF;
+    --color-primary-shade1: #8A98FF;
+    --color-primary-shade2: #6366f1;
+    --color-primary-shade3: #4D5CCC;
+
+    --color-secondary: #565f89;
+    --color-secondary-shade1: #49516f;
+    --color-secondary-shade2: #3c4356;
+    --color-secondary-shade3: #2f3640;
+
+    --color-background-dark: #181C31;
+    --color-background-dark-shade1: #1D223D;
+    --color-background-dark-shade2: #222847;
+    --color-background-dark-shade3: #272E50;
+
+    --color-foreground-dark: #1C2136;
+    --color-foreground-dark-shade1: #252A42;
+    --color-foreground-dark-shade2: #1A1E32;
+    --color-foreground-dark-shade3: #2B2F4C;
+
+    --color-background-light: #f2eeff;   
+    --color-background-light-shade1: #ece8ff;  
+    --color-background-light-shade2: #e5e0ff;
+    --color-background-light-shade3: #ddd8ff;  
+
+    --color-foreground-light: #f7f6ff;
+    --color-foreground-light-shade1: #f2efff;
+    --color-foreground-light-shade2: #eae7fc;
+    --color-foreground-light-shade3: #e1def7;
+
+    --color-heading-dark: #95a3fa;         
+    --color-heading-dark-shade1: #a0aefc;  
+    --color-heading-dark-shade2: #8c9bfb; 
+    --color-heading-dark-shade3: #7f90f7;
+
+    --color-heading-light: #6a70c2;         
+    --color-heading-light-shade1: #5f65b3;   
+    --color-heading-light-shade2: #545aa4;
+    --color-heading-light-shade3: #494f95; 
+
+    --color-body-dark: #a9b1d6;
+    --color-body-dark-shade1: #9aa3c9;
+    --color-body-dark-shade2: #8b95bc;
+    --color-body-dark-shade3: #7c87af;
+
+    --color-muted-dark: #828bb8;
+    --color-muted-dark-shade1: #767fad;
+    --color-muted-dark-shade2: #6a739f;
+    --color-muted-dark-shade3: #5e678f;
+
+    --color-body-light: #3b3f63;
+    --color-body-light-shade1: #32365a;
+    --color-body-light-shade2: #2a2e4f;
+    --color-body-light-shade3: #222644;
+
+    --color-muted-light: #6b7394;
+    --color-muted-light-shade1: #5e6687;
+    --color-muted-light-shade2: #515978;
+    --color-muted-light-shade3: #444c69;
+
+    --color-destructive: #ff4655;
+    --color-destructive-shade1: #ff6b7a;
+    --color-destructive-shade2: #cc3845;
+    --color-destructive-shade3: #992a35;
+
+    --color-success: #00ffb2;
+    --color-success-shade1: #00cc8f;
+    --color-success-shade2: #009973;
+    --color-success-shade3: #00664d;
+
+    --color-warning: #e0af68;
+    --color-warning-shade1: #eabf8a;
+    --color-warning-shade2: #c8964a;
+    --color-warning-shade3: #b07d32;
+
+    --color-teal: #73daca;
+    --color-teal-shade1: #92e5d8;
+    --color-teal-shade2: #58c2b2;
+    --color-teal-shade3: #3eaa9a;
+
+    --color-blue: #7aa2f7;
+    --color-blue-shade1: #9ab9ff;
+    --color-blue-shade2: #5e8ae3;
+    --color-blue-shade3: #4672cc;
+
+    --color-purple: #bb9af7;
+    --color-purple-shade1: #cbb0ff;
+    --color-purple-shade2: #a17de3;
+    --color-purple-shade3: #8865cc;
+
+    --color-info: #7dcfff;
+    --color-info-shade1: #9ad9ff;
+    --color-info-shade2: #5eb8e8;
+    --color-info-shade3: #409fd1;
+
+    --color-azure: #2ac3de;
+    --color-azure-shade1: #4fd3eb;
+    --color-azure-shade2: #1aa8c2;
+    --color-azure-shade3: #088ea8;
+
+    --color-pink: #f7768e;
+    --color-pink-shade1: #f48da6;
+    --color-pink-shade2: #d95b7a;
+    --color-pink-shade3: #c2415f;
+
+    --color-olive: #9ece6a;
+    --color-olive-shade1: #b3d98c;
+    --color-olive-shade2: #85b44a;
+    --color-olive-shade3: #6b9c38;
+
+
+    /* Font Families */
+    --font-sans: 'Andika', system-ui, sans-serif;
+    --font-serif: 'Gowun Batang', serif;
+    --font-mono: 'Fira Code', monospace;
+    --font-logo: 'New Rocker', cursive;
+
+
+    /* Font Sizes and Typography */
+    --text-h1: 3rem;
+    --text-h1--line-height: 3.25rem;
+    --text-h1--letter-spacing: -0.02em;
+    --text-h1--font-weight: 500;
+
+    --text-h2: 2.5rem;
+    --text-h2--line-height: 3rem;
+    --text-h2--letter-spacing: -0.015em;
+    --text-h2--font-weight: 500;
+
+    --text-h3: 2.25rem;
+    --text-h3--line-height: 2.75rem;
+    --text-h3--letter-spacing: -0.01em;
+    --text-h3--font-weight: 500;
+
+    --text-h4: 1.5rem;
+    --text-h4--line-height: 2rem;
+    --text-h4--letter-spacing: 0;
+    --text-h4--font-weight: 500;
+
+    --text-h5: 1.125rem;
+    --text-h5--line-height: 1.75rem;
+    --text-h5--letter-spacing: 0.01em;
+    --text-h5--font-weight: 400;
+
+    --text-h6: 1rem;
+    --text-h6--line-height: 1.5rem;
+    --text-h6--letter-spacing: 0.01em;
+    --text-h6--font-weight: 400;
+
+    --text-base: 1rem;
+    --text-base--line-height: 1.25rem;
+    --text-base--letter-spacing: 0.01em;
+    --text-base--font-weight: 400;
+
+    --text-p: 0.875rem;
+    --text-p--line-height: 1.25rem;
+    --text-p--letter-spacing: 0.01em;
+    --text-p--font-weight: 400;
+
+    --text-span: 0.75rem;
+    --text-span--line-height: 1rem;
+    --text-span--letter-spacing: 0.02em;
+    --text-span--font-weight: 400;
+
+    --text-small: 0.625rem;
+    --text-small--line-height: 1rem;
+    --text-small--letter-spacing: 0.02em;
+    --text-small--font-weight: 400;
+
+    --text-label: 0.875rem;
+    --text-label--line-height: 1.25rem;
+    --text-label--letter-spacing: 0.01em;
+    --text-label--font-weight: 500;
+
+
+    /* Font Weights */
+    --font-weight-extrathin: 50;
+    --font-weight-thin: 100;
+    --font-weight-extralight: 200;
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+    --font-weight-superbold: 900;
+
+
+    /* Spacing Scale */
+    --spacing-xs-1: 0rem;
+    --spacing-xs-2: 0.125rem;
+    --spacing-sm-1: 0.25rem;
+    --spacing-sm-2: 0.5rem;
+    --spacing-md-1: 0.75rem;
+    --spacing-md-2: 1rem;
+    --spacing-lg-1: 1.5rem;
+    --spacing-lg-2: 2rem;
+    --spacing-xl-1: 2.5rem;
+    --spacing-xl-2: 3rem;
+    --spacing-xxl-1: 3.75rem;
+    --spacing-xxl-2: 4rem;
+    --spacing-xxxl-1: 5rem;
+    --spacing-xxxl-2: 6rem;
+
+
+    /* Border Radius */
+    --radius-xs: 0.25rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-xxl: 1.5rem;
+
+
+    /* Breakpoints */
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-xxl: 1536px;
+    --breakpoint-xxxl: 1920px;
+
+}
+
+
+/* Define custom utilities for typography */
+@utility typography-h1 {
+    font-size: var(--text-h1);
+    line-height: var(--text-h1--line-height);
+    letter-spacing: var(--text-h1--letter-spacing);
+    font-weight: var(--text-h1--font-weight);
+}
+
+@utility typography-h2 {
+    font-size: var(--text-h2);
+    line-height: var(--text-h2--line-height);
+    letter-spacing: var(--text-h2--letter-spacing);
+    font-weight: var(--text-h2--font-weight);
+}
+
+@utility typography-h3 {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+}
+
+@utility typography-h4 {
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    letter-spacing: var(--text-h4--letter-spacing);
+    font-weight: var(--text-h4--font-weight);
+}
+
+@utility typography-h5 {
+    font-size: var(--text-h5);
+    line-height: var(--text-h5--line-height);
+    letter-spacing: var(--text-h5--letter-spacing);
+    font-weight: var(--text-h5--font-weight);
+}
+
+@utility typography-h6 {
+    font-size: var(--text-h6);
+    line-height: var(--text-h6--line-height);
+    letter-spacing: var(--text-h6--letter-spacing);
+    font-weight: var(--text-h6--font-weight);
+}
+
+@utility typography-base {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    letter-spacing: var(--text-base--letter-spacing);
+    font-weight: var(--text-base--font-weight);
+}
+
+@utility typography-p {
+    font-size: var(--text-p);
+    line-height: var(--text-p--line-height);
+    letter-spacing: var(--text-p--letter-spacing);
+    font-weight: var(--text-p--font-weight);
+}
+
+@utility typography-span {
+    font-size: var(--text-span);
+    line-height: var(--text-span--line-height);
+    letter-spacing: var(--text-span--letter-spacing);
+    font-weight: var(--text-span--font-weight);
+}
+
+@utility typography-caption {
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    letter-spacing: var(--text-small--letter-spacing);
+    font-weight: var(--text-small--font-weight);
+}
+
+@utility typography-label {
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    letter-spacing: var(--text-label--letter-spacing);
+    font-weight: var(--text-label--font-weight);
+}
