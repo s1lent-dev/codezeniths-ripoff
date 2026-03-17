@@ -1,4 +1,4 @@
-import { Difficulty, Status } from "@prisma/client";
+import { Difficulty, Level, Status } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "./prisma.client";
 
@@ -7,12 +7,48 @@ import { prisma } from "./prisma.client";
 // ─────────────────────────────────────────────
 
 const DifficultySchema = z.enum(Difficulty);
+const LevelSchema      = z.enum(Level);
 
 const DifficultyDistributionSchema = z.object({
-  easy: z.number().int().nonnegative(),
+  easy:   z.number().int().nonnegative(),
   medium: z.number().int().nonnegative(),
-  hard: z.number().int().nonnegative(),
+  hard:   z.number().int().nonnegative(),
 });
+
+// Reusable schema for solved + total counts per difficulty
+const SolvedDistributionSchema = z.object({
+  easy:   z.object({ solved: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
+  medium: z.object({ solved: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
+  hard:   z.object({ solved: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
+});
+
+export type SolvedDistribution = z.infer<typeof SolvedDistributionSchema>;
+
+// ─────────────────────────────────────────────
+// Shared helper — compute SolvedDistribution
+// from a flat array of { difficulty, status }
+// ─────────────────────────────────────────────
+
+function computeSolvedDistribution(
+  problems: { difficulty: Difficulty; status: Status }[]
+): SolvedDistribution {
+  const dist = {
+    easy:   { solved: 0, total: 0 },
+    medium: { solved: 0, total: 0 },
+    hard:   { solved: 0, total: 0 },
+  };
+
+  for (const { difficulty, status } of problems) {
+    const key =
+      difficulty === Difficulty.EASY   ? "easy"   :
+      difficulty === Difficulty.MEDIUM ? "medium" : "hard";
+
+    dist[key].total++;
+    if (status === Status.SOLVED) dist[key].solved++;
+  }
+
+  return dist;
+}
 
 // ─────────────────────────────────────────────
 // getAllTopics — schema & return type
@@ -43,7 +79,6 @@ export async function getAllTopics(): Promise<TopicMeta[]> {
       _count: {
         select: { subTopics: true },
       },
-      // Only pull difficulty — no other problem data needed here
       problems: {
         select: {
           problem: {
@@ -58,9 +93,9 @@ export async function getAllTopics(): Promise<TopicMeta[]> {
     const distribution = { easy: 0, medium: 0, hard: 0 };
 
     for (const { problem } of topic.problems) {
-      if (problem.difficulty === Difficulty.EASY) distribution.easy++;
+      if (problem.difficulty === Difficulty.EASY)        distribution.easy++;
       else if (problem.difficulty === Difficulty.MEDIUM) distribution.medium++;
-      else if (problem.difficulty === Difficulty.HARD) distribution.hard++;
+      else if (problem.difficulty === Difficulty.HARD)   distribution.hard++;
     }
 
     return {
@@ -75,8 +110,37 @@ export async function getAllTopics(): Promise<TopicMeta[]> {
     };
   });
 
-  // Parse & validate the entire array — throws ZodError if shape is wrong
   return z.array(TopicMetaSchema).parse(topics);
+}
+
+// ─────────────────────────────────────────────
+// getProgress — schema & return type
+// ─────────────────────────────────────────────
+
+const ProgressSchema = z.object({
+  totalProblems: z.number().int().nonnegative(),
+  totalSolved:   z.number().int().nonnegative(),
+  byDifficulty:  SolvedDistributionSchema,
+  totalRevisits: z.number().int().nonnegative(),
+});
+
+export type Progress = z.infer<typeof ProgressSchema>;
+
+export async function getProgress(): Promise<Progress> {
+  const problems = await prisma.problem.findMany({
+    select: {
+      difficulty: true,
+      status: true,
+      revisit: true,
+    },
+  });
+
+  const byDifficulty  = computeSolvedDistribution(problems);
+  const totalProblems = problems.length;
+  const totalSolved   = problems.filter((p) => p.status === Status.SOLVED).length;
+  const totalRevisits = problems.filter((p) => p.revisit === true).length;
+
+  return ProgressSchema.parse({ totalProblems, totalSolved, byDifficulty, totalRevisits });
 }
 
 // ─────────────────────────────────────────────
@@ -100,6 +164,8 @@ const SubTopicSchema = z.object({
   title: z.string(),
   slug: z.string(),
   order: z.number().int(),
+  problemCount: z.number().int().nonnegative(),
+  solvedCount:  z.number().int().nonnegative(),
   problems: z.array(ProblemSchema),
 });
 
@@ -107,13 +173,19 @@ const SingleTopicSchema = z.object({
   id: z.uuidv7(),
   title: z.string(),
   slug: z.string(),
+  description: z.string().nullable(),
+  level: LevelSchema,
   order: z.number().int(),
   iconPath: z.string().nullable(),
+  problemCount: z.number().int().nonnegative(),
+  solvedCount:  z.number().int().nonnegative(),
+  byDifficulty: SolvedDistributionSchema,
+  totalRevisits: z.number().int().nonnegative(),
   subTopics: z.array(SubTopicSchema),
 });
 
-export type SingleTopic = z.infer<typeof SingleTopicSchema>;
-export type SubTopic = z.infer<typeof SubTopicSchema>;
+export type SingleTopic  = z.infer<typeof SingleTopicSchema>;
+export type SubTopic     = z.infer<typeof SubTopicSchema>;
 export type TopicProblem = z.infer<typeof ProblemSchema>;
 
 export async function getSingleTopic(slug: string): Promise<SingleTopic | null> {
@@ -123,6 +195,8 @@ export async function getSingleTopic(slug: string): Promise<SingleTopic | null> 
       id: true,
       title: true,
       slug: true,
+      description: true,   // ← new
+      level: true,         // ← new
       order: true,
       iconPath: true,
       subTopics: {
@@ -157,52 +231,69 @@ export async function getSingleTopic(slug: string): Promise<SingleTopic | null> 
 
   if (!raw) return null;
 
-  // Flatten join-table wrapper: { order, problem: {...} } → { order, ...problem }
+  const subTopics = raw.subTopics.map((subTopic) => {
+    const problems = subTopic.problems.map(({ order, problem }) => ({
+      order,
+      ...problem,
+    }));
+
+    return {
+      id: subTopic.id,
+      title: subTopic.title,
+      slug: subTopic.slug,
+      order: subTopic.order,
+      problemCount: problems.length,
+      solvedCount:  problems.filter((p) => p.status === Status.SOLVED).length,
+      problems,
+    };
+  });
+
+  const allProblems  = subTopics.flatMap((s) => s.problems);
+  const byDifficulty = computeSolvedDistribution(allProblems);
+  const totalRevisits = allProblems.filter((p) => p.revisit === true).length;
+
   const shaped = {
-    ...raw,
-    subTopics: raw.subTopics.map((subTopic) => ({
-      ...subTopic,
-      problems: subTopic.problems.map(({ order, problem }) => ({
-        order,
-        ...problem,
-      })),
-    })),
+    id: raw.id,
+    title: raw.title,
+    slug: raw.slug,
+    description: raw.description,   // ← new
+    level: raw.level,               // ← new
+    order: raw.order,
+    iconPath: raw.iconPath,
+    problemCount: allProblems.length,
+    solvedCount:  allProblems.filter((p) => p.status === Status.SOLVED).length,
+    byDifficulty,
+    totalRevisits,
+    subTopics,
   };
 
-  // Parse & validate — throws ZodError if shape is wrong
   return SingleTopicSchema.parse(shaped);
 }
 
-
-
 // ─────────────────────────────────────────────
-// Schema
+// updateProblemStatus — schema & return type
 // ─────────────────────────────────────────────
- 
+
 const UpdateProblemStatusInputSchema = z.object({
   slug: z.string(),
   status: z.enum(Status),
 });
- 
+
 const UpdateProblemStatusResultSchema = z.object({
   id: z.uuidv7(),
   slug: z.string(),
   status: z.enum(Status),
   updatedAt: z.date(),
 });
- 
-export type UpdateProblemStatusInput = z.infer<typeof UpdateProblemStatusInputSchema>;
+
+export type UpdateProblemStatusInput  = z.infer<typeof UpdateProblemStatusInputSchema>;
 export type UpdateProblemStatusResult = z.infer<typeof UpdateProblemStatusResultSchema>;
- 
-// ─────────────────────────────────────────────
-// updateProblemStatus
-// ─────────────────────────────────────────────
- 
+
 export async function updateProblemStatus(
   input: UpdateProblemStatusInput
 ): Promise<UpdateProblemStatusResult> {
   const { slug, status } = UpdateProblemStatusInputSchema.parse(input);
- 
+
   const updated = await prisma.problem.update({
     where: { slug },
     data: { status },
@@ -213,13 +304,12 @@ export async function updateProblemStatus(
       updatedAt: true,
     },
   });
- 
+
   return UpdateProblemStatusResultSchema.parse(updated);
 }
 
-
 // ─────────────────────────────────────────────
-// Schema
+// updateProblemRevisit — schema & return type
 // ─────────────────────────────────────────────
 
 const UpdateProblemRevisitInputSchema = z.object({
@@ -234,12 +324,8 @@ const UpdateProblemRevisitResultSchema = z.object({
   updatedAt: z.date(),
 });
 
-export type UpdateProblemRevisitInput = z.infer<typeof UpdateProblemRevisitInputSchema>;
+export type UpdateProblemRevisitInput  = z.infer<typeof UpdateProblemRevisitInputSchema>;
 export type UpdateProblemRevisitResult = z.infer<typeof UpdateProblemRevisitResultSchema>;
-
-// ─────────────────────────────────────────────
-// updateProblemRevisit
-// ─────────────────────────────────────────────
 
 export async function updateProblemRevisit(
   input: UpdateProblemRevisitInput

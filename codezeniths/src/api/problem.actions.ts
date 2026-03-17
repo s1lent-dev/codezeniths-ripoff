@@ -1,7 +1,15 @@
 "use server";
 
 import { Status } from "@prisma/client";
-import { updateProblemStatus, updateProblemRevisit } from "@/db/queries";
+import { getProgress, updateProblemStatus, updateProblemRevisit } from "@/db/queries";
+
+// ─────────────────────────────────────────────
+// getProgressAction
+// ─────────────────────────────────────────────
+
+export async function getProgressAction() {
+  return await getProgress();
+}
 
 // ─────────────────────────────────────────────
 // updateProblemStatusAction

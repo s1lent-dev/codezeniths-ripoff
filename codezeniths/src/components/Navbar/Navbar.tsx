@@ -19,28 +19,28 @@ const Navbar = () => {
         {/* Center - Navigation Tabs */}
         <div className="hidden md:flex items-center gap-2">
           <Link
-            href="/sheets"
+            href="/"
             className="px-4 py-2 typography-p text-muted-light dark:text-muted-dark hover:text-body-light hover:dark:text-body-dark rounded-md transition-colors cursor-pointer"
           >
-            Sheets
+            Home
           </Link>
           <Link
-            href="/topics"
+            href="/"
             className="px-4 py-2 typography-p text-muted-light dark:text-muted-dark hover:text-body-light hover:dark:text-body-dark rounded-md transition-colors cursor-pointer"
           >
             Topics
           </Link>
           <Link
-            href="/problems"
+            href="/"
             className="px-4 py-2 typography-p text-muted-light dark:text-muted-dark hover:text-body-light hover:dark:text-body-dark rounded-md transition-colors cursor-pointer"
           >
             Problems
           </Link>
           <Link
-            href="/sandbox"
+            href="/"
             className="px-4 py-2 typography-p text-muted-light dark:text-muted-dark hover:text-body-light hover:dark:text-body-dark rounded-md transition-colors cursor-pointer"
           >
-            Sandbox
+            Sheet
           </Link>
         </div>
 

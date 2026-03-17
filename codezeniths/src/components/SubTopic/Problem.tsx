@@ -111,7 +111,7 @@ const Problem: FC<ProblemProps> = memo(({ problem, topicSlug }) => {
             transition-colors duration-150
             truncate
             ${isSolved
-              ? "line-through text-muted-light dark:text-muted-dark"
+              ? "text-muted-light dark:text-muted-dark"
               : "text-body-light dark:text-body-dark"
             }
           `}

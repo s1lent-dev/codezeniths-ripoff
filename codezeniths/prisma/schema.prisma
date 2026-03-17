@@ -17,14 +17,20 @@ enum Status {
     NOT_SOLVED
 }
 
+enum Level {
+    FUNDAMENTAL
+    INTERMEDIATE
+    ADVANCED
+}
+
 model Problem {
     id           String         @id @default(uuid(7)) @db.Uuid
     title        String
     slug         String         @unique
     content      String?
     difficulty   Difficulty
-    status       Status        @default(NOT_SOLVED)
-    revisit      Boolean       @default(false)
+    status       Status         @default(NOT_SOLVED)
+    revisit      Boolean        @default(false)
     leetcodeUrl  String?
     articleUrl   String?
     topicProblem TopicProblem[]
@@ -36,13 +42,15 @@ model Problem {
 }
 
 model Topic {
-    id        String         @id @default(uuid(7)) @db.Uuid
-    title     String
-    slug      String
-    order     Int
-    iconPath  String?
-    subTopics SubTopic[]
-    problems  TopicProblem[]
+    id          String         @id @default(uuid(7)) @db.Uuid
+    title       String
+    slug        String
+    order       Int
+    iconPath    String?
+    description String?
+    level       Level?
+    subTopics   SubTopic[]
+    problems    TopicProblem[]
 
     @@unique([slug])
     @@index([order])
@@ -64,14 +72,14 @@ model SubTopic {
 }
 
 model TopicProblem {
-    id            String    @id @default(uuid(7)) @db.Uuid
-    topicId       String    @db.Uuid
+    id            String   @id @default(uuid(7)) @db.Uuid
+    topicId       String   @db.Uuid
     subTopicId    String   @db.Uuid
-    problemId     String    @db.Uuid
+    problemId     String   @db.Uuid
     order         Int
-    topic         Topic     @relation(fields: [topicId], references: [id])
+    topic         Topic    @relation(fields: [topicId], references: [id])
     sheetSubTopic SubTopic @relation(fields: [subTopicId], references: [id])
-    problem       Problem   @relation(fields: [problemId], references: [id])
+    problem       Problem  @relation(fields: [problemId], references: [id])
 
     @@unique([topicId, subTopicId, problemId])
     @@index([order])

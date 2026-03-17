@@ -3,6 +3,7 @@
 import { FC, memo, useState } from "react";
 import type { SubTopic as SubTopicType } from "@/db/queries";
 import Problem from "./Problem";
+import { LinearProgress } from "@/components/shared/linear-progress";
 
 interface SubTopicProps {
   subTopic: SubTopicType;
@@ -12,7 +13,7 @@ interface SubTopicProps {
 
 const SubTopic: FC<SubTopicProps> = memo(({ subTopic, topicSlug, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const { title, problems } = subTopic;
+  const { title, problems, solvedCount, problemCount } = subTopic;
 
   return (
     <div
@@ -33,8 +34,8 @@ const SubTopic: FC<SubTopicProps> = memo(({ subTopic, topicSlug, defaultOpen = f
           group/trigger
         "
       >
-        <div className="flex items-center gap-4">
-          {/* Animated chevron */}
+        {/* Left — chevron + title */}
+        <div className="flex items-center gap-4 min-w-0">
           <svg
             width="20"
             height="20"
@@ -59,31 +60,24 @@ const SubTopic: FC<SubTopicProps> = memo(({ subTopic, topicSlug, defaultOpen = f
               text-foreground-dark-shade3
               dark:text-foreground-light-shade3
               transition-colors duration-150
-              text-left
+              text-left truncate
             "
           >
             {title}
           </span>
         </div>
 
-        {/* Problem count pill */}
-        <span
-          className="
-            typography-p font-sans
-            text-muted-light dark:text-muted-dark bg-foreground-light-shade3 dark:bg-foreground-dark-shade3
-            px-3 py-1 rounded-xs
-            shrink-0 ml-4
-          "
-        >
-          {problems.length} {problems.length === 1 ? "problem" : "problems"}
-        </span>
+        {/* Right — linear progress bar */}
+        <div className="shrink-0 ml-6 w-64" onClick={(e) => e.stopPropagation()}>
+          <LinearProgress solved={solvedCount} total={problemCount} />
+        </div>
       </button>
 
       {/* Collapsible problem list */}
       <div
         className={`
           transition-all duration-200 ease-in-out overflow-hidden
-          ${isOpen ? "max-h-2499.75 opacity-100" : "max-h-0 opacity-0"}
+          ${isOpen ? "max-h-[9999px] opacity-100" : "max-h-0 opacity-0"}
         `}
       >
         <div className="border-t border-background-light-shade3 dark:border-background-dark-shade3">

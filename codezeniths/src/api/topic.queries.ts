@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { type TopicMeta, type SingleTopic } from "@/db/queries";
-import { Status } from "@prisma/client";
-import { updateProblemRevisitAction, updateProblemStatusAction } from "./problem.actions";
+import { type TopicMeta, type SingleTopic, type Progress } from "@/db/queries";
+import { Status, Level } from "@prisma/client";
+import {
+  getProgressAction,
+  updateProblemRevisitAction,
+  updateProblemStatusAction,
+} from "./problem.actions";
 
 // ─────────────────────────────────────────────
 // Query keys
@@ -13,16 +17,26 @@ export const topicKeys = {
   single: (slug: string) => ["topics", slug] as const,
 };
 
+export const progressKeys = {
+  all: ["progress"] as const,
+};
+
 // ─────────────────────────────────────────────
-// Zod schemas — client-safe, no Prisma imports
+// Zod schemas — must match getSingleTopic shape
 // ─────────────────────────────────────────────
 
 const DifficultySchema = z.enum(["EASY", "MEDIUM", "HARD"]);
 
 const DifficultyDistributionSchema = z.object({
-  easy: z.number().int().nonnegative(),
+  easy:   z.number().int().nonnegative(),
   medium: z.number().int().nonnegative(),
-  hard: z.number().int().nonnegative(),
+  hard:   z.number().int().nonnegative(),
+});
+
+const SolvedDistributionSchema = z.object({
+  easy:   z.object({ solved: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
+  medium: z.object({ solved: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
+  hard:   z.object({ solved: z.number().int().nonnegative(), total: z.number().int().nonnegative() }),
 });
 
 const TopicMetaSchema = z.object({
@@ -53,6 +67,8 @@ const SubTopicSchema = z.object({
   title: z.string(),
   slug: z.string(),
   order: z.number().int(),
+  problemCount: z.number().int().nonnegative(),
+  solvedCount:  z.number().int().nonnegative(),
   problems: z.array(ProblemSchema),
 });
 
@@ -62,10 +78,22 @@ const SingleTopicSchema = z.object({
   slug: z.string(),
   order: z.number().int(),
   iconPath: z.string().nullable(),
+  description: z.string().nullable(),
+  level: z.nativeEnum(Level),
+  problemCount:  z.number().int().nonnegative(),
+  solvedCount:   z.number().int().nonnegative(),
+  byDifficulty:  SolvedDistributionSchema,
+  totalRevisits: z.number().int().nonnegative(),
   subTopics: z.array(SubTopicSchema),
 });
 
-// updatedAt comes back as a Date from Prisma — use z.date() not z.string().datetime()
+const ProgressSchema = z.object({
+  totalProblems: z.number().int().nonnegative(),
+  totalSolved:   z.number().int().nonnegative(),
+  byDifficulty:  SolvedDistributionSchema,
+  totalRevisits: z.number().int().nonnegative(),
+});
+
 const UpdateProblemStatusResultSchema = z.object({
   id: z.uuidv7(),
   slug: z.string(),
@@ -79,6 +107,71 @@ const UpdateProblemRevisitResultSchema = z.object({
   revisit: z.boolean(),
   updatedAt: z.date(),
 });
+
+// ─────────────────────────────────────────────
+// patchTopicCache
+//
+// Applies a patch function to every problem in the
+// cache, then recomputes ALL derived fields in one pass:
+//   - sub.solvedCount     per subtopic
+//   - topic.solvedCount   total
+//   - topic.byDifficulty  easy/medium/hard solved+total
+//   - topic.totalRevisits
+// ─────────────────────────────────────────────
+
+type CachedProblem = SingleTopic["subTopics"][0]["problems"][0];
+
+function patchTopicCache(
+  old: SingleTopic,
+  patch: (p: CachedProblem) => CachedProblem
+): SingleTopic {
+  const subTopics = old.subTopics.map((sub) => {
+    const problems = sub.problems.map(patch);
+    return {
+      ...sub,
+      problems,
+      solvedCount: problems.filter((p) => p.status === Status.SOLVED).length,
+    };
+  });
+
+  const allProblems = subTopics.flatMap((s) => s.problems);
+
+  // Recompute byDifficulty
+  const byDifficulty = {
+    easy:   { solved: 0, total: 0 },
+    medium: { solved: 0, total: 0 },
+    hard:   { solved: 0, total: 0 },
+  };
+  for (const p of allProblems) {
+    const key =
+      p.difficulty === "EASY"   ? "easy"   :
+      p.difficulty === "MEDIUM" ? "medium" : "hard";
+    byDifficulty[key].total++;
+    if (p.status === Status.SOLVED) byDifficulty[key].solved++;
+  }
+
+  return {
+    ...old,
+    subTopics,
+    solvedCount:   allProblems.filter((p) => p.status === Status.SOLVED).length,
+    totalRevisits: allProblems.filter((p) => p.revisit).length,
+    byDifficulty,
+  };
+}
+
+// ─────────────────────────────────────────────
+// useGetProgress
+// ─────────────────────────────────────────────
+
+export function useGetProgress() {
+  return useQuery<Progress, Error>({
+    queryKey: progressKeys.all,
+    queryFn: async () => {
+      const res = await getProgressAction();
+      return ProgressSchema.parse(res);
+    },
+  });
+}
 
 // ─────────────────────────────────────────────
 // useGetAllTopics
@@ -136,44 +229,32 @@ export function useUpdateProblemStatus(topicSlug: string) {
       return UpdateProblemStatusResultSchema.parse(res);
     },
 
-    // 1. Instantly update the UI before the server responds
     onMutate: async ({ slug, status }) => {
       await queryClient.cancelQueries({ queryKey: topicKeys.single(topicSlug) });
       const previous = queryClient.getQueryData<SingleTopic>(topicKeys.single(topicSlug));
 
       queryClient.setQueryData<SingleTopic>(topicKeys.single(topicSlug), (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          subTopics: old.subTopics.map((sub) => ({
-            ...sub,
-            problems: sub.problems.map((p) =>
-              p.slug === slug ? { ...p, status } : p
-            ),
-          })),
-        };
+        return patchTopicCache(old, (p) =>
+          p.slug === slug ? { ...p, status } : p
+        );
       });
 
       return { previous };
     },
 
-    // 2. On success, write the confirmed server value into the cache
     onSuccess: (result) => {
       queryClient.setQueryData<SingleTopic>(topicKeys.single(topicSlug), (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          subTopics: old.subTopics.map((sub) => ({
-            ...sub,
-            problems: sub.problems.map((p) =>
-              p.slug === result.slug ? { ...p, status: result.status } : p
-            ),
-          })),
-        };
+        return patchTopicCache(old, (p) =>
+          p.slug === result.slug ? { ...p, status: result.status } : p
+        );
       });
+
+      // Keep global progress card in sync
+      queryClient.invalidateQueries({ queryKey: progressKeys.all });
     },
 
-    // 3. Roll back to snapshot if the server call fails
     onError: (_err, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(topicKeys.single(topicSlug), context.previous);
@@ -195,44 +276,29 @@ export function useUpdateProblemRevisit(topicSlug: string) {
       return UpdateProblemRevisitResultSchema.parse(res);
     },
 
-    // 1. Instantly update the UI before the server responds
     onMutate: async ({ slug, revisit }) => {
       await queryClient.cancelQueries({ queryKey: topicKeys.single(topicSlug) });
       const previous = queryClient.getQueryData<SingleTopic>(topicKeys.single(topicSlug));
 
       queryClient.setQueryData<SingleTopic>(topicKeys.single(topicSlug), (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          subTopics: old.subTopics.map((sub) => ({
-            ...sub,
-            problems: sub.problems.map((p) =>
-              p.slug === slug ? { ...p, revisit } : p
-            ),
-          })),
-        };
+        return patchTopicCache(old, (p) =>
+          p.slug === slug ? { ...p, revisit } : p
+        );
       });
 
       return { previous };
     },
 
-    // 2. On success, write the confirmed server value into the cache
     onSuccess: (result) => {
       queryClient.setQueryData<SingleTopic>(topicKeys.single(topicSlug), (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          subTopics: old.subTopics.map((sub) => ({
-            ...sub,
-            problems: sub.problems.map((p) =>
-              p.slug === result.slug ? { ...p, revisit: result.revisit } : p
-            ),
-          })),
-        };
+        return patchTopicCache(old, (p) =>
+          p.slug === result.slug ? { ...p, revisit: result.revisit } : p
+        );
       });
     },
 
-    // 3. Roll back to snapshot if the server call fails
     onError: (_err, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(topicKeys.single(topicSlug), context.previous);
