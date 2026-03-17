@@ -205,7 +205,7 @@ export function CircularProgress({
           >
             <span
               className="font-mono text-3xl font-bold tabular-nums"
-              style={{ color: "var(--color-primary)", opacity: 0.75 }}
+              style={{ color: "var(--color-heading-dark-shade1)", opacity: 1 }}
             >
               {overallPct}%
             </span>

@@ -150,7 +150,7 @@ const SingleTopic: FC<SingleTopicProps> = ({ slug }) => {
             <SubTopic
               key={subTopic.id}
               subTopic={subTopic}
-              defaultOpen={i === 0}
+              defaultOpen={false}
               topicSlug={slug}
             />
           ))}
