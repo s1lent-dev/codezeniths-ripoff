@@ -124,6 +124,7 @@ const SingleTopic: FC<SingleTopicProps> = ({ slug }) => {
               key={subTopic.id}
               subTopic={subTopic}
               defaultOpen={i === 0}
+              topicSlug={slug}
             />
           ))}
         </div>

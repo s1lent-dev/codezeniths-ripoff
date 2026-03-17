@@ -12,12 +12,19 @@ enum Difficulty {
     HARD
 }
 
+enum Status {
+    SOLVED
+    NOT_SOLVED
+}
+
 model Problem {
     id           String         @id @default(uuid(7)) @db.Uuid
     title        String
     slug         String         @unique
     content      String?
     difficulty   Difficulty
+    status       Status        @default(NOT_SOLVED)
+    revisit      Boolean       @default(false)
     leetcodeUrl  String?
     articleUrl   String?
     topicProblem TopicProblem[]

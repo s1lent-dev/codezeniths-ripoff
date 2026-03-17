@@ -15,15 +15,19 @@ export const AnimatedThemeToggler = ({
   duration = 400,
   ...props
 }: AnimatedThemeTogglerProps) => {
-  const [isDark, setIsDark] = useState(false)
+  // Read the class synchronously so initial state matches what the inline script set
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : true // SSR fallback — dark is default
+  )
+
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const updateTheme = () => {
       setIsDark(document.documentElement.classList.contains("dark"))
     }
-
-    updateTheme()
 
     const observer = new MutationObserver(updateTheme)
     observer.observe(document.documentElement, {
@@ -92,7 +96,10 @@ export const AnimatedThemeToggler = ({
       className={cn(className)}
       {...props}
     >
-      {isDark ? <Sun className="text-muted-light dark:text-muted-dark cursor-pointer" /> : <Moon className="text-muted-light dark:text-muted-dark cursor-pointer" />}
+      {isDark
+        ? <Sun className="text-muted-light dark:text-muted-dark cursor-pointer" />
+        : <Moon className="text-muted-light dark:text-muted-dark cursor-pointer" />
+      }
       <span className="sr-only">Toggle theme</span>
     </button>
   )

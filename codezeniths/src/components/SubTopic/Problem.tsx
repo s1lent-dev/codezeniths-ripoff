@@ -1,25 +1,63 @@
 "use client";
 
-import { FC, memo } from "react";
+import { FC, memo, useState } from "react";
 import Link from "next/link";
+import { Star } from "lucide-react";
+import { Status } from "@prisma/client";
 import type { TopicProblem } from "@/db/queries";
+import {
+  useUpdateProblemStatus,
+  useUpdateProblemRevisit,
+} from "@/api/topic.queries";
 
 interface ProblemProps {
   problem: TopicProblem;
-  index: number;
+  topicSlug: string;
 }
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
- 
+
 const difficultyConfig: Record<Difficulty, { label: string; className: string }> = {
   EASY: { label: "Easy", className: "text-olive bg-olive/10" },
   MEDIUM: { label: "Medium", className: "text-warning bg-warning/10" },
   HARD: { label: "Hard", className: "text-destructive bg-destructive/10" },
 };
 
-const Problem: FC<ProblemProps> = memo(({ problem, index }) => {
-  const { title, difficulty, leetcodeUrl, articleUrl, order } = problem;
+const Problem: FC<ProblemProps> = memo(({ problem, topicSlug }) => {
+  const { title, slug, difficulty, leetcodeUrl, articleUrl } = problem;
   const diff = difficultyConfig[difficulty as Difficulty];
+
+  // Local state initialized from props — updates instantly on mutation success
+  const [status, setStatus] = useState<Status>(problem.status);
+  const [revisit, setRevisit] = useState<boolean>(problem.revisit);
+
+  const isSolved = status === Status.SOLVED;
+
+  const { mutate: updateStatus, isPending: isStatusPending } =
+    useUpdateProblemStatus(topicSlug);
+  const { mutate: updateRevisit, isPending: isRevisitPending } =
+    useUpdateProblemRevisit(topicSlug);
+
+  const handleStatusToggle = () => {
+    const newStatus = isSolved ? Status.NOT_SOLVED : Status.SOLVED;
+    updateStatus(
+      { slug, status: newStatus },
+      {
+        onSuccess: (res) => setStatus(res.status),
+      }
+    );
+  };
+
+  const handleRevisitToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newRevisit = !revisit;
+    updateRevisit(
+      { slug, revisit: newRevisit },
+      {
+        onSuccess: (res) => setRevisit(res.revisit),
+      }
+    );
+  };
 
   return (
     <div
@@ -31,24 +69,58 @@ const Problem: FC<ProblemProps> = memo(({ problem, index }) => {
         group/problem cursor-pointer
       "
     >
-      {/* Left — index + title */}
+      {/* Left — checkbox + title */}
       <div className="flex items-center gap-4 min-w-0">
-        <span className="typography-p font-sans text-muted-light dark:text-muted-dark shrink-0 w-6 text-right">
-          {order}.
-        </span>
+        {/* Status checkbox */}
+        <button
+          type="button"
+          onClick={handleStatusToggle}
+          disabled={isStatusPending}
+          aria-label={isSolved ? "Mark as not solved" : "Mark as solved"}
+          className="shrink-0 w-5 h-5 rounded-sm border-2 flex items-center justify-center transition-colors duration-150
+            border-muted-light dark:border-muted-dark
+            disabled:opacity-50 disabled:cursor-not-allowed
+            hover:border-primary
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer
+          "
+          style={{
+            backgroundColor: isSolved ? "var(--color-primary)" : "transparent",
+            borderColor: isSolved ? "var(--color-primary)" : undefined,
+          }}
+        >
+          {isSolved && (
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="2,6 5,9 10,3" />
+            </svg>
+          )}
+        </button>
+
+        {/* Title */}
         <span
-          className="
+          className={`
             typography-base font-sans
-            text-body-light dark:text-body-dark
             transition-colors duration-150
             truncate
-          "
+            ${isSolved
+              ? "line-through text-muted-light dark:text-muted-dark"
+              : "text-body-light dark:text-body-dark"
+            }
+          `}
         >
           {title}
         </span>
       </div>
 
-      {/* Right — difficulty + links */}
+      {/* Right — difficulty + links + revisit star */}
       <div className="flex items-center gap-6 shrink-0 ml-6">
         {/* Difficulty badge */}
         <span
@@ -117,6 +189,29 @@ const Problem: FC<ProblemProps> = memo(({ problem, index }) => {
         ) : (
           <span className="w-5 shrink-0" />
         )}
+
+        {/* Revisit star */}
+        <button
+          onClick={handleRevisitToggle}
+          disabled={isRevisitPending}
+          aria-label={revisit ? "Remove revisit" : "Mark for revisit"}
+          title={revisit ? "Remove revisit" : "Mark for revisit"}
+          className="
+            shrink-0 transition-colors duration-150
+            disabled:opacity-50 disabled:cursor-not-allowed
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning cursor-pointer
+          "
+        >
+          <Star
+            width={20}
+            height={20}
+            className={
+              revisit
+                ? "fill-warning stroke-warning"
+                : "fill-none stroke-muted-dark hover:stroke-warning"
+            }
+          />
+        </button>
       </div>
     </div>
   );

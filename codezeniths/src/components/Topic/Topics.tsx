@@ -15,8 +15,8 @@ const TopicsGrid: FC = () => {
           <div
             key={i}
             className="
-              h-44 w-75 rounded-sm border border-secondary-shade1
-              bg-foreground-dark animate-pulse
+              h-44 w-75 rounded-sm border border-background-light-shade3 dark:border-background-dark-shade3
+              bg-foreground-light dark:bg-foreground-dark animate-pulse
             "
           />
         ))}

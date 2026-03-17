@@ -1,4 +1,4 @@
-import { Difficulty } from "@prisma/client";
+import { Difficulty, Status } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "./prisma.client";
 
@@ -6,7 +6,7 @@ import { prisma } from "./prisma.client";
 // Shared primitive schemas
 // ─────────────────────────────────────────────
 
-const DifficultySchema = z.nativeEnum(Difficulty);
+const DifficultySchema = z.enum(Difficulty);
 
 const DifficultyDistributionSchema = z.object({
   easy: z.number().int().nonnegative(),
@@ -90,6 +90,8 @@ const ProblemSchema = z.object({
   difficulty: DifficultySchema,
   leetcodeUrl: z.url().nullable(),
   articleUrl: z.url().nullable(),
+  status: z.enum(Status),
+  revisit: z.boolean(),
   order: z.number().int().nonnegative(),
 });
 
@@ -142,6 +144,8 @@ export async function getSingleTopic(slug: string): Promise<SingleTopic | null> 
                   difficulty: true,
                   leetcodeUrl: true,
                   articleUrl: true,
+                  status: true,
+                  revisit: true,
                 },
               },
             },
@@ -167,4 +171,91 @@ export async function getSingleTopic(slug: string): Promise<SingleTopic | null> 
 
   // Parse & validate — throws ZodError if shape is wrong
   return SingleTopicSchema.parse(shaped);
+}
+
+
+
+// ─────────────────────────────────────────────
+// Schema
+// ─────────────────────────────────────────────
+ 
+const UpdateProblemStatusInputSchema = z.object({
+  slug: z.string(),
+  status: z.enum(Status),
+});
+ 
+const UpdateProblemStatusResultSchema = z.object({
+  id: z.uuidv7(),
+  slug: z.string(),
+  status: z.enum(Status),
+  updatedAt: z.date(),
+});
+ 
+export type UpdateProblemStatusInput = z.infer<typeof UpdateProblemStatusInputSchema>;
+export type UpdateProblemStatusResult = z.infer<typeof UpdateProblemStatusResultSchema>;
+ 
+// ─────────────────────────────────────────────
+// updateProblemStatus
+// ─────────────────────────────────────────────
+ 
+export async function updateProblemStatus(
+  input: UpdateProblemStatusInput
+): Promise<UpdateProblemStatusResult> {
+  const { slug, status } = UpdateProblemStatusInputSchema.parse(input);
+ 
+  const updated = await prisma.problem.update({
+    where: { slug },
+    data: { status },
+    select: {
+      id: true,
+      slug: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+ 
+  return UpdateProblemStatusResultSchema.parse(updated);
+}
+
+
+// ─────────────────────────────────────────────
+// Schema
+// ─────────────────────────────────────────────
+
+const UpdateProblemRevisitInputSchema = z.object({
+  slug: z.string(),
+  revisit: z.boolean(),
+});
+
+const UpdateProblemRevisitResultSchema = z.object({
+  id: z.uuidv7(),
+  slug: z.string(),
+  revisit: z.boolean(),
+  updatedAt: z.date(),
+});
+
+export type UpdateProblemRevisitInput = z.infer<typeof UpdateProblemRevisitInputSchema>;
+export type UpdateProblemRevisitResult = z.infer<typeof UpdateProblemRevisitResultSchema>;
+
+// ─────────────────────────────────────────────
+// updateProblemRevisit
+// ─────────────────────────────────────────────
+
+export async function updateProblemRevisit(
+  input: UpdateProblemRevisitInput
+): Promise<UpdateProblemRevisitResult> {
+  const { slug, revisit } = UpdateProblemRevisitInputSchema.parse(input);
+
+  const updated = await prisma.problem.update({
+    where: { slug },
+    data: { revisit },
+    select: {
+      id: true,
+      slug: true,
+      revisit: true,
+      updatedAt: true,
+    },
+  });
+
+  return UpdateProblemRevisitResultSchema.parse(updated);
 }

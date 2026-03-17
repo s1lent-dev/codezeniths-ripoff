@@ -7,9 +7,10 @@ import Problem from "./Problem";
 interface SubTopicProps {
   subTopic: SubTopicType;
   defaultOpen?: boolean;
+  topicSlug: string;
 }
 
-const SubTopic: FC<SubTopicProps> = memo(({ subTopic, defaultOpen = false }) => {
+const SubTopic: FC<SubTopicProps> = memo(({ subTopic, topicSlug, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const { title, problems } = subTopic;
 
@@ -91,8 +92,8 @@ const SubTopic: FC<SubTopicProps> = memo(({ subTopic, defaultOpen = false }) => 
               No problems yet.
             </p>
           ) : (
-            problems.map((problem, i) => (
-              <Problem key={problem.id} problem={problem} index={i + 1} />
+            problems.map((problem) => (
+              <Problem key={problem.id} problem={problem} topicSlug={topicSlug} />
             ))
           )}
         </div>
